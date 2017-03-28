@@ -24,6 +24,9 @@ The goals / steps of this project are the following:
 [image8]: ./results/Block_A.jpeg "Inception-ResNet-v1 Block A"
 [image9]: ./results/Block_B.jpeg "Inception-ResNet-v1 Block B"
 [image10]: ./results/Block_C.jpeg "Inception-ResNet-v1 Block C"
+[image11]: ./results/dataset_analysis.png "Analysis of Datasets Ordering"
+[image12]: ./results/distribution.png "Distribution of Datasets"
+[image13]: ./results/probabilities_top5.png "Top 5 Probabilities"
 
 
 ## Rubric Points
@@ -103,6 +106,9 @@ ClassId                                           SignName
 41       41                                  End of no passing
 42       42  End of no passing by vehicles over 3.5 metric ...
 ```
+For training it is important to know how the datasets are distributed w.r.t. to the different classes. In general there wont be equally many samples for all of the different classes within a training set. An ideal training set would be, to my knowledge, evenly distributed. The following figures show the distributions of the differents set ('train', 'test', 'valid').
+![alt text][image12]
+For one thing, it can be observed that all datasets have a very similar distribution. But classes are not evenly distributed. This will have an effect on the training accuracy, since the model will 'see' only very few samples from some classes (e.g. #19) compared to others (e.g. #10)
 
 The get a better idea about the type of data, a random subset is plotted.
 ![alt text][image5]
@@ -137,7 +143,10 @@ Here are some resulting images from the normalization step.
 In order to train the model the labels are encoded via _one-hot-encoding_. I used _sklearn.preprocessing.OneHotEncoder_ although there are alternatives in native tensorflow or keras.
 I future projects I want to stick to one library and therefore do the entire preprocessing with either tensorflow or keras.
 
-The entire training dataset gets shuffled once, to ensure an even distribution of classes within each batch.
+The entire training dataset gets shuffled once in order to have as many different classes within each batch as possible. The following figures show the a sorted and a shuffled dataset.
+![alt text][image11]
+After the shuffling step, the dataset has a random order.
+
 
 I didn't perform any data augmentation within this project.
 
@@ -257,3 +266,49 @@ I spend long hours on adapting and implementing the Inception-ResNet-v1 architec
 ### Test a Model on New Images
 Here are some images for testing the model.
 ![alt text][image4]
+
+### Prediction on New Images
+The training model is then used to make predictions about new images it has not 'seen' before.
+Here are the results:
+```python
+Predicted sign: 'General caution'
+Predicted sign: 'Ahead only'
+Predicted sign: 'End of no passing'
+Predicted sign: 'Go straight or right'
+Predicted sign: 'Turn right ahead'
+Predicted sign: 'Speed limit (50km/h)'
+```
+### Top 5 Probabilities
+
+![alt text][image13]
+
+### Discussion of The Prediction results
+As it can be seen by comparing the predictions to the images, only the last two are actually correct.
+Considering that these are six samples from a set of 43 classes this result is at least better than random guessing.
+However, it is far from the 94% which were reached for the validation set.
+I think this may be due to the following reasons:
+1. The normalization was done for every set separately as can be seen from the code here:
+```python
+def normalize(features, method='standard'):
+    X = features.copy()
+    if method=='standard':
+        scaler = StandardScaler()
+    elif method=='norm':
+        scaler = Normalizer()
+    elif method=='minmax':
+        scaler = MinMaxScaler(feature_range=(0, 1))
+
+    for key in X:
+        shape      = X[key].shape
+        image_size = shape[1] * shape[2] * shape[3]    
+        X[key]     = X[key].reshape(-1, image_size)
+        X[key]     = scaler.fit_transform(np.float32(X[key])).reshape(-1, shape[1], shape[2], shape[3])
+    return X
+```
+The results could eventually be improved by fitting the 'scaler' only to the training set and then apply the transformation to all sets.
+
+2. The size reduction was performed without any whitening steps
+Therefore the images look very artificial to the human eye and so maybe also to the model.
+
+To be honest, I'm not sure, wether all images I chose are within the training set at all. This was due to picking the pictures in a hurry.
+I would be very interested on the review giving a hint about further causes.
